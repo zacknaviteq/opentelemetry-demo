@@ -1,0 +1,79 @@
+# Copyright The OpenTelemetry Authors
+# SPDX-License-Identifier: Apache-2.0
+# Posts a Slack notification when a pull request is opened or merged.
+name: Slack PR Notifications
+
+on:
+  pull_request:
+    types: [opened, reopened, ready_for_review, closed]
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}-${{ github.event.action }}
+  cancel-in-progress: false
+
+jobs:
+  notify:
+    name: Notify Slack
+    runs-on: ubuntu-latest
+    permissions: {}
+    # Skip closed-without-merge, and fork PRs (no access to secrets).
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      (github.event.action != 'closed' || github.event.pull_request.merged == true)
+    steps:
+      - name: Build Slack payload
+        id: payload
+        env:
+          ACTION: ${{ github.event.action }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          MERGED_BY: ${{ github.event.pull_request.merged_by.login }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          REPO: ${{ github.repository }}
+          HAS_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL != '' }}
+        run: |
+          if [ "$HAS_WEBHOOK" != "true" ]; then
+            echo "::warning::SLACK_WEBHOOK_URL secret is not set; skipping Slack notification."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [ "$ACTION" = "closed" ]; then
+            MODE=merged
+          else
+            MODE=opened
+          fi
+          # jq builds the JSON so user-controlled values (title, branch names) are safely escaped.
+          jq -n \
+            --arg mode "$MODE" \
+            --arg action "$ACTION" \
+            --arg number "$PR_NUMBER" \
+            --arg title "$PR_TITLE" \
+            --arg url "$PR_URL" \
+            --arg author "$PR_AUTHOR" \
+            --arg merged_by "$MERGED_BY" \
+            --arg base "$BASE_REF" \
+            --arg head "$HEAD_REF" \
+            --arg repo "$REPO" '
+            def esc: gsub("&"; "&amp;") | gsub("<"; "&lt;") | gsub(">"; "&gt;");
+            ($title | esc) as $t
+            | (if $mode == "merged" then
+                ":white_check_mark: PR merged in \($repo): <\($url)|#\($number) \($t)>\nMerged by *\($merged_by | esc)* into `\($base | esc)`"
+              else
+                ":arrow_heading_up: PR \($action | gsub("_"; " ")) in \($repo): <\($url)|#\($number) \($t)>\nAuthor: *\($author | esc)* | `\($base | esc)` ← `\($head | esc)`"
+              end) as $text
+            | {text: $text}
+          ' > "$RUNNER_TEMP/slack-payload.json"
+          echo "path=$RUNNER_TEMP/slack-payload.json" >> "$GITHUB_OUTPUT"
+
+      - name: Send Slack notification
+        if: steps.payload.outputs.skip != 'true'
+        uses: slackapi/slack-github-action@dcb1066f776dd043e64d0e8ba94ca15cc7e1875d  # v4.0.0
+        with:
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          webhook-type: incoming-webhook
+          payload-file-path: ${{ steps.payload.outputs.path }}
