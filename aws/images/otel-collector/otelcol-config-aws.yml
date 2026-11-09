@@ -1,0 +1,153 @@
+# Copyright The OpenTelemetry Authors
+# SPDX-License-Identifier: Apache-2.0
+
+# Collector config for the AWS (ECS Fargate) deployment. Everything goes to CloudWatch:
+#   traces  -> X-Ray OTLP endpoint (Transaction Search), sampled to TRACE_SAMPLING_PERCENTAGE
+#   metrics -> EMF (awsemf), filtered to span metrics with low-cardinality dimensions
+#   logs    -> CloudWatch Logs OTLP endpoint (OTEL_LOGS_LOG_GROUP)
+# Jaeger, Prometheus, OpenSearch and Grafana are not used.
+
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+  sigv4auth/traces:
+    region: ${env:AWS_REGION}
+    service: xray
+  sigv4auth/logs:
+    region: ${env:AWS_REGION}
+    service: logs
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+        cors:
+          allowed_origins:
+            - "http://*"
+            - "https://*"
+          allowed_headers:
+            - "content-type"
+            - "traceparent"
+            - "baggage"
+
+processors:
+  memory_limiter:
+    check_interval: 5s
+    limit_mib: 800
+    spike_limit_mib: 160
+  batch:
+    send_batch_size: 1024
+    timeout: 5s
+  resource_detection:
+    detectors: [env, ecs]
+    timeout: 2s
+    override: false
+
+  # --- upstream processors (src/otel-collector/otelcol-config.yml) ---
+  transform/sanitize_logs:
+    error_mode: ignore
+    log_statements:
+      - context: scope
+        statements:
+          - set(attributes["otelcol_signal"], attributes["otelcol.signal"]) where attributes["otelcol.signal"] != nil and not IsMap(attributes["otelcol.signal"])
+          - delete_key(attributes, "otelcol.signal") where attributes["otelcol_signal"] != nil
+  gen_ai_normalizer:
+    sources:
+      - name: openllmetry
+  transform/sanitize_spans:
+    error_mode: ignore
+    trace_statements:
+      - context: span
+        statements:
+          - set_semconv_span_name("1.43.0", "original_span_name")
+  transform/redact_sensitive_data:
+    error_mode: ignore
+    trace_statements:
+      - context: span
+        statements:
+          - delete_key(attributes, "demo.payment.card_cvv") where attributes["demo.payment.card_cvv"] != nil
+          - set(attributes["user.hash"], SHA256(attributes["user.email"])) where attributes["user.email"] != nil
+          - delete_key(attributes, "user.email") where attributes["user.email"] != nil
+          - replace_pattern(attributes["demo.payment.card_number"], "^\\d{4}-\\d{4}-\\d{4}-", "****-****-****-") where attributes["demo.payment.card_number"] != nil
+  redaction:
+    allow_all_keys: true
+    ignored_keys:
+      - demo.payment.card_number
+    blocked_key_patterns:
+      - "demo\\.payment\\.card_pin"
+      - "password"
+      - "secret"
+    summary: info
+
+  # --- cost controls ---
+  probabilistic_sampler:
+    sampling_percentage: ${env:TRACE_SAMPLING_PERCENTAGE}
+  # Only span (RED) metrics reach EMF; app/runtime metrics are dropped to keep the
+  # number of CloudWatch custom metrics small.
+  filter/emf:
+    error_mode: ignore
+    metrics:
+      metric:
+        - 'not IsMatch(name, "^traces\\.span\\.metrics\\.(calls|duration)$")'
+
+connectors:
+  # RED metrics are computed from 100% of spans, before sampling.
+  span_metrics:
+  forward/traces:
+
+exporters:
+  otlphttp/traces:
+    compression: gzip
+    traces_endpoint: https://xray.${env:AWS_REGION}.amazonaws.com/v1/traces
+    auth:
+      authenticator: sigv4auth/traces
+  otlphttp/logs:
+    compression: gzip
+    logs_endpoint: https://logs.${env:AWS_REGION}.amazonaws.com/v1/logs
+    headers:
+      x-aws-log-group: ${env:OTEL_LOGS_LOG_GROUP}
+      x-aws-log-stream: otel
+    auth:
+      authenticator: sigv4auth/logs
+  awsemf:
+    region: ${env:AWS_REGION}
+    namespace: ${env:EMF_NAMESPACE}
+    log_group_name: ${env:EMF_LOG_GROUP}
+    log_stream_name: otel-collector
+    dimension_rollup_option: NoDimensionRollup
+    resource_to_telemetry_conversion:
+      enabled: true
+    metric_declarations:
+      - dimensions: [["service.name", "status.code"]]
+        metric_name_selectors:
+          - "^traces\\.span\\.metrics\\.calls$"
+          - "^traces\\.span\\.metrics\\.duration$"
+
+service:
+  extensions: [health_check, sigv4auth/traces, sigv4auth/logs]
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, resource_detection, transform/sanitize_spans, gen_ai_normalizer, transform/redact_sensitive_data, redaction]
+      exporters: [span_metrics, forward/traces]
+    traces/export:
+      receivers: [forward/traces]
+      processors: [probabilistic_sampler, batch]
+      exporters: [otlphttp/traces]
+    metrics:
+      # otlp stays a receiver so SDK metric exports succeed; filter/emf drops them.
+      receivers: [otlp, span_metrics]
+      processors: [memory_limiter, filter/emf, batch]
+      exporters: [awsemf]
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, resource_detection, transform/sanitize_logs, batch]
+      exporters: [otlphttp/logs]
+  telemetry:
+    logs:
+      level: info
+    metrics:
+      level: none

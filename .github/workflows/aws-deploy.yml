@@ -1,0 +1,209 @@
+# Copyright The OpenTelemetry Authors
+# SPDX-License-Identifier: Apache-2.0
+# Build every service image for linux/arm64, push to ECR and deploy to ECS Fargate.
+#   pull_request -> build the changed images (no push)
+#   push to main -> build + push the changed images, then redeploy their ECS services
+#   workflow_dispatch -> build, push and redeploy everything
+# The image catalogue is aws/images.json. Infra lives in infra/ (Terraform).
+#
+# Deploys never change desiredCount: outside working hours services stay at 0 and
+# pick up the new latest-<image> tag at the next scheduled start.
+name: AWS build and deploy
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'pb/**'
+      - 'aws/**'
+      - 'otel-config.yml'
+      - '.env'
+      - '.github/workflows/aws-deploy.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'pb/**'
+      - 'aws/**'
+      - 'otel-config.yml'
+      - '.env'
+      - '.github/workflows/aws-deploy.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: aws-deploy-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  changes:
+    name: Select images
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.select.outputs.matrix }}
+      services: ${{ steps.select.outputs.services }}
+      any: ${{ steps.select.outputs.any }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Select changed images
+        id: select
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          set -euo pipefail
+          all=false
+          if [ "$EVENT" = "workflow_dispatch" ]; then
+            all=true
+          elif [ -z "$BASE_SHA" ] || [ "$BASE_SHA" = "0000000000000000000000000000000000000000" ] \
+               || ! git cat-file -e "${BASE_SHA}^{commit}" 2>/dev/null; then
+            all=true
+          else
+            git diff --name-only "$BASE_SHA" HEAD > changed.txt
+            echo "Changed files:"; cat changed.txt
+            if grep -qE '^(pb/|\.env$|aws/images\.json$|\.github/workflows/aws-deploy\.yml$)' changed.txt; then
+              all=true
+            fi
+          fi
+
+          if [ "$all" = "true" ]; then
+            matrix=$(jq -c '{include: .}' aws/images.json)
+          else
+            matrix=$(jq -c --rawfile changed changed.txt '
+              ($changed | split("\n") | map(select(length > 0))) as $files
+              | {include: [ .[] | select(. as $i | any($files[]; . as $f | any($i.paths[]; . as $p | $f | startswith($p)))) ]}' aws/images.json)
+          fi
+          services=$(jq -c '[.include[].service] | unique' <<<"$matrix")
+          any=$(jq -r 'if (.include | length) > 0 then "true" else "false" end' <<<"$matrix")
+          echo "Images: $(jq -c '[.include[].image]' <<<"$matrix")"
+          echo "Services: $services"
+          {
+            echo "matrix=$matrix"
+            echo "services=$services"
+            echo "any=$any"
+          } >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Build ${{ matrix.image }} (arm64)
+    needs: changes
+    if: needs.changes.outputs.any == 'true'
+    runs-on: ${{ vars.ARM_RUNNER || 'ubuntu-24.04-arm' }}
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      id-token: write
+    strategy:
+      fail-fast: false
+      max-parallel: 10
+      matrix: ${{ fromJSON(needs.changes.outputs.matrix) }}
+    env:
+      PUSH: ${{ github.event_name != 'pull_request' && github.ref == 'refs/heads/main' }}
+      IMAGE: ${{ matrix.image }}
+      DOCKERFILE: ${{ matrix.dockerfile }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Load versions from .env
+        run: |
+          set -euo pipefail
+          set -a; . ./.env; set +a
+          for v in OTEL_JAVA_AGENT_VERSION OPENTELEMETRY_CPP_VERSION OPAMP_GO_REF \
+                   COLLECTOR_CONTRIB_IMAGE FLAGD_IMAGE POSTGRES_IMAGE VALKEY_IMAGE; do
+            echo "$v=${!v}" >> "$GITHUB_ENV"
+          done
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Configure AWS credentials (OIDC)
+        if: env.PUSH == 'true'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Log in to ECR
+        if: env.PUSH == 'true'
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build${{ env.PUSH == 'true' && ' and push' || '' }}
+        env:
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+          ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
+        run: |
+          set -euo pipefail
+          args=(
+            --platform linux/arm64
+            --file "$DOCKERFILE"
+            --provenance=false
+            --cache-from "type=gha,scope=$IMAGE"
+            --build-arg "OTEL_JAVA_AGENT_VERSION=$OTEL_JAVA_AGENT_VERSION"
+            --build-arg "OPENTELEMETRY_CPP_VERSION=$OPENTELEMETRY_CPP_VERSION"
+            --build-arg "OPAMP_GO_REF=$OPAMP_GO_REF"
+            --build-arg "COLLECTOR_CONTRIB_IMAGE=$COLLECTOR_CONTRIB_IMAGE"
+            --build-arg "FLAGD_IMAGE=$FLAGD_IMAGE"
+            --build-arg "POSTGRES_IMAGE=$POSTGRES_IMAGE"
+            --build-arg "VALKEY_IMAGE=$VALKEY_IMAGE"
+          )
+          if [ "$PUSH" = "true" ]; then
+            repo="$REGISTRY/$ECR_REPOSITORY"
+            args+=(
+              --cache-to "type=gha,mode=max,scope=$IMAGE"
+              --tag "$repo:$GITHUB_SHA-$IMAGE"
+              --tag "$repo:latest-$IMAGE"
+              --push
+            )
+          fi
+          docker buildx build "${args[@]}" .
+
+  deploy:
+    name: Deploy to ECS
+    needs: [changes, build]
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && needs.changes.outputs.any == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      CLUSTER: ${{ vars.ECS_CLUSTER }}
+      SERVICES: ${{ needs.changes.outputs.services }}
+    steps:
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Roll out new images (desiredCount unchanged)
+        run: |
+          set -euo pipefail
+          running=()
+          for svc in $(jq -r '.[]' <<<"$SERVICES"); do
+            desired=$(aws ecs describe-services --cluster "$CLUSTER" --services "$svc" \
+              --query 'services[0].desiredCount' --output text)
+            aws ecs update-service --cluster "$CLUSTER" --service "$svc" \
+              --force-new-deployment --query 'service.serviceName' --output text >/dev/null
+            echo "$svc: new deployment (desiredCount=$desired)"
+            if [ "$desired" != "0" ]; then running+=("$svc"); fi
+          done
+          echo "RUNNING=${running[*]}" >> "$GITHUB_ENV"
+
+      - name: Wait for running services to stabilize
+        if: env.RUNNING != ''
+        run: |
+          set -euo pipefail
+          read -r -a svcs <<<"$RUNNING"
+          for ((i = 0; i < ${#svcs[@]}; i += 10)); do
+            aws ecs wait services-stable --cluster "$CLUSTER" --services "${svcs[@]:i:10}"
+          done
+          echo "Stable: ${svcs[*]}"

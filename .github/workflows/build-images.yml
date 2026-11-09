@@ -2,11 +2,9 @@
 # SPDX-License-Identifier: Apache-2.0
 name: Test image generation
 
+# Disabled for the AWS fork: images are built and pushed to ECR by aws-deploy.yml.
 on:
-  push:
-    paths:
-      - 'src/**'
-      - 'test/**'
+  workflow_dispatch:
 
 permissions:
   contents: read

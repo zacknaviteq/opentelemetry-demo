@@ -1,0 +1,72 @@
+# Copyright The OpenTelemetry Authors
+# SPDX-License-Identifier: Apache-2.0
+# Manual start/stop override for the AWS deployment. The EventBridge schedule
+# (infra/schedule.tf) does the same thing on working days; whichever ran last wins.
+#   start -> desiredCount=1 for every service in vars.ECS_SERVICES (load-generator excluded)
+#   stop  -> desiredCount=0 for every service in the cluster
+# The ALB and NAT gateway are never touched, so the public URL stays the same.
+name: Site control
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: start or stop the otel-demo services
+        required: true
+        type: choice
+        options: [start, stop]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: site-control
+  cancel-in-progress: false
+
+jobs:
+  control:
+    name: ${{ inputs.action }} services
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      ACTION: ${{ inputs.action }}
+      CLUSTER: ${{ vars.ECS_CLUSTER }}
+      ECS_SERVICES: ${{ vars.ECS_SERVICES }}
+    steps:
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Scale services
+        run: |
+          set -euo pipefail
+          if [ "$ACTION" = "start" ]; then
+            count=1
+            services=$(tr ',' ' ' <<<"$ECS_SERVICES")
+          else
+            count=0
+            services=$(aws ecs list-services --cluster "$CLUSTER" --query 'serviceArns[]' --output text \
+              | tr '\t' '\n' | awk -F/ '{print $NF}')
+          fi
+          for svc in $services; do
+            aws ecs update-service --cluster "$CLUSTER" --service "$svc" --desired-count "$count" \
+              --query 'service.serviceName' --output text >/dev/null
+            echo "$svc -> $count"
+          done
+          echo "SERVICES=$(echo $services)" >> "$GITHUB_ENV"
+
+      - name: Wait for services to stabilize
+        if: inputs.action == 'start'
+        run: |
+          set -euo pipefail
+          read -r -a svcs <<<"$SERVICES"
+          for ((i = 0; i < ${#svcs[@]}; i += 10)); do
+            aws ecs wait services-stable --cluster "$CLUSTER" --services "${svcs[@]:i:10}"
+          done
+          echo "All services stable."

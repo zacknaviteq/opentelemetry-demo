@@ -1,0 +1,215 @@
+[
+  {
+    "image": "accounting",
+    "dockerfile": "src/accounting/Dockerfile",
+    "service": "accounting",
+    "paths": [
+      "src/accounting/"
+    ]
+  },
+  {
+    "image": "ad",
+    "dockerfile": "src/ad/Dockerfile",
+    "service": "ad",
+    "paths": [
+      "src/ad/"
+    ]
+  },
+  {
+    "image": "agent",
+    "dockerfile": "src/agent/Dockerfile",
+    "service": "agent",
+    "paths": [
+      "src/agent/",
+      "src/shared/"
+    ]
+  },
+  {
+    "image": "astronomy-db",
+    "dockerfile": "aws/images/astronomy-db/Dockerfile",
+    "service": "astronomy-db",
+    "paths": [
+      "aws/images/astronomy-db/",
+      "src/postgresql/"
+    ]
+  },
+  {
+    "image": "cart",
+    "dockerfile": "src/cart/src/Dockerfile",
+    "service": "cart",
+    "paths": [
+      "src/cart/"
+    ]
+  },
+  {
+    "image": "chatbot",
+    "dockerfile": "src/chatbot/Dockerfile",
+    "service": "chatbot",
+    "paths": [
+      "src/chatbot/"
+    ]
+  },
+  {
+    "image": "checkout",
+    "dockerfile": "src/checkout/Dockerfile",
+    "service": "checkout",
+    "paths": [
+      "src/checkout/"
+    ]
+  },
+  {
+    "image": "currency",
+    "dockerfile": "src/currency/Dockerfile",
+    "service": "currency",
+    "paths": [
+      "src/currency/"
+    ]
+  },
+  {
+    "image": "email",
+    "dockerfile": "src/email/Dockerfile",
+    "service": "email",
+    "paths": [
+      "src/email/"
+    ]
+  },
+  {
+    "image": "flagd",
+    "dockerfile": "aws/images/flagd/Dockerfile",
+    "service": "flagd",
+    "paths": [
+      "aws/images/flagd/"
+    ]
+  },
+  {
+    "image": "flagd-init",
+    "dockerfile": "aws/images/flagd-init/Dockerfile",
+    "service": "flagd",
+    "paths": [
+      "aws/images/flagd-init/",
+      "src/flagd/"
+    ]
+  },
+  {
+    "image": "flagd-ui",
+    "dockerfile": "src/flagd-ui/Dockerfile",
+    "service": "flagd-ui",
+    "paths": [
+      "src/flagd-ui/"
+    ]
+  },
+  {
+    "image": "fraud-detection",
+    "dockerfile": "src/fraud-detection/Dockerfile",
+    "service": "fraud-detection",
+    "paths": [
+      "src/fraud-detection/"
+    ]
+  },
+  {
+    "image": "frontend",
+    "dockerfile": "src/frontend/Dockerfile",
+    "service": "frontend",
+    "paths": [
+      "src/frontend/"
+    ]
+  },
+  {
+    "image": "frontend-proxy",
+    "dockerfile": "src/frontend-proxy/Dockerfile",
+    "service": "frontend-proxy",
+    "paths": [
+      "src/frontend-proxy/"
+    ]
+  },
+  {
+    "image": "image-provider",
+    "dockerfile": "src/image-provider/Dockerfile",
+    "service": "image-provider",
+    "paths": [
+      "src/image-provider/"
+    ]
+  },
+  {
+    "image": "kafka",
+    "dockerfile": "src/kafka/Dockerfile",
+    "service": "kafka",
+    "paths": [
+      "src/kafka/"
+    ]
+  },
+  {
+    "image": "load-generator",
+    "dockerfile": "src/load-generator/Dockerfile",
+    "service": "load-generator",
+    "paths": [
+      "src/load-generator/"
+    ]
+  },
+  {
+    "image": "mcp",
+    "dockerfile": "src/mcp/Dockerfile",
+    "service": "mcp",
+    "paths": [
+      "src/mcp/",
+      "src/shared/"
+    ]
+  },
+  {
+    "image": "otel-collector",
+    "dockerfile": "aws/images/otel-collector/Dockerfile",
+    "service": "otel-collector",
+    "paths": [
+      "aws/images/otel-collector/"
+    ]
+  },
+  {
+    "image": "payment",
+    "dockerfile": "src/payment/Dockerfile",
+    "service": "payment",
+    "paths": [
+      "src/payment/"
+    ]
+  },
+  {
+    "image": "product-catalog",
+    "dockerfile": "src/product-catalog/Dockerfile",
+    "service": "product-catalog",
+    "paths": [
+      "src/product-catalog/",
+      "otel-config.yml"
+    ]
+  },
+  {
+    "image": "quote",
+    "dockerfile": "src/quote/Dockerfile",
+    "service": "quote",
+    "paths": [
+      "src/quote/"
+    ]
+  },
+  {
+    "image": "recommendation",
+    "dockerfile": "src/recommendation/Dockerfile",
+    "service": "recommendation",
+    "paths": [
+      "src/recommendation/"
+    ]
+  },
+  {
+    "image": "shipping",
+    "dockerfile": "src/shipping/Dockerfile",
+    "service": "shipping",
+    "paths": [
+      "src/shipping/"
+    ]
+  },
+  {
+    "image": "valkey-cart",
+    "dockerfile": "aws/images/valkey-cart/Dockerfile",
+    "service": "valkey-cart",
+    "paths": [
+      "aws/images/valkey-cart/"
+    ]
+  }
+]
