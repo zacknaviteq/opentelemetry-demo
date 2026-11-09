@@ -127,8 +127,8 @@ jobs:
         if: env.PUSH == 'true'
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
-          aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: ${{ vars.AWS_ROLE_ARN || 'arn:aws:iam::960410382237:role/otel-demo-github-deploy' }}
+          aws-region: ${{ vars.AWS_REGION || 'us-east-1' }}
 
       - name: Log in to ECR
         if: env.PUSH == 'true'
@@ -138,7 +138,7 @@ jobs:
       - name: Build${{ env.PUSH == 'true' && ' and push' || '' }}
         env:
           REGISTRY: ${{ steps.ecr.outputs.registry }}
-          ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
+          ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY || 'opentelemetry-demo' }}
         run: |
           set -euo pipefail
           args=(
@@ -175,14 +175,14 @@ jobs:
       contents: read
       id-token: write
     env:
-      CLUSTER: ${{ vars.ECS_CLUSTER }}
+      CLUSTER: ${{ vars.ECS_CLUSTER || 'otel-demo' }}
       SERVICES: ${{ needs.changes.outputs.services }}
     steps:
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
-          aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: ${{ vars.AWS_ROLE_ARN || 'arn:aws:iam::960410382237:role/otel-demo-github-deploy' }}
+          aws-region: ${{ vars.AWS_REGION || 'us-east-1' }}
 
       - name: Roll out new images (desiredCount unchanged)
         run: |
