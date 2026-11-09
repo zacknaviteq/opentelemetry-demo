@@ -1,4 +1,4 @@
 change_type: bug_fix
 component: aws
 note: Raise the flagd-ui nofile ulimit on Fargate and make flagd-ui non-essential so it no longer crash-loops the flagd task (KAN-16).
-issues: []
+issues: [26]
