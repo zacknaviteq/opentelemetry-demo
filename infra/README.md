@@ -32,13 +32,15 @@ setting: X-Ray segments from any workload in the region go to the `aws/spans` lo
 
 ## GitHub repo variables
 
+Optional. The workflows default to the values below; set a variable only to override it.
+
 | Variable | Value |
 | --- | --- |
 | `AWS_ROLE_ARN` | `terraform output -raw github_deploy_role_arn` |
 | `AWS_REGION` | `us-east-1` |
 | `ECR_REPOSITORY` | `terraform output -raw ecr_repository` |
 | `ECS_CLUSTER` | `terraform output -raw ecs_cluster` |
-| `ECS_SERVICES` | `terraform output -raw scheduled_services` |
+| `ECS_SERVICES` | `terraform output -raw scheduled_services` (default: every service except load-generator) |
 | `ARM_RUNNER` | optional, defaults to `ubuntu-24.04-arm` |
 
 ## Workflows

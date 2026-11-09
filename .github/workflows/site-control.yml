@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Manual start/stop override for the AWS deployment. The EventBridge schedule
 # (infra/schedule.tf) does the same thing on working days; whichever ran last wins.
-#   start -> desiredCount=1 for every service in vars.ECS_SERVICES (load-generator excluded)
+#   start -> desiredCount=1 for vars.ECS_SERVICES, default every service except load-generator
 #   stop  -> desiredCount=0 for every service in the cluster
 # The ALB and NAT gateway are never touched, so the public URL stays the same.
 name: Site control
@@ -34,21 +34,27 @@ jobs:
       id-token: write
     env:
       ACTION: ${{ inputs.action }}
-      CLUSTER: ${{ vars.ECS_CLUSTER }}
+      CLUSTER: ${{ vars.ECS_CLUSTER || 'otel-demo' }}
       ECS_SERVICES: ${{ vars.ECS_SERVICES }}
     steps:
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
-          aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: ${{ vars.AWS_ROLE_ARN || 'arn:aws:iam::960410382237:role/otel-demo-github-deploy' }}
+          aws-region: ${{ vars.AWS_REGION || 'us-east-1' }}
 
       - name: Scale services
         run: |
           set -euo pipefail
           if [ "$ACTION" = "start" ]; then
             count=1
-            services=$(tr ',' ' ' <<<"$ECS_SERVICES")
+            if [ -n "$ECS_SERVICES" ]; then
+              services=$(tr ',' ' ' <<<"$ECS_SERVICES")
+            else
+              # Default: every service in the cluster except load-generator.
+              services=$(aws ecs list-services --cluster "$CLUSTER" --query 'serviceArns[]' --output text \
+                | tr '\t' '\n' | awk -F/ '{print $NF}' | grep -vx load-generator)
+            fi
           else
             count=0
             services=$(aws ecs list-services --cluster "$CLUSTER" --query 'serviceArns[]' --output text \

@@ -1,0 +1,4 @@
+change_type: enhancement
+component: aws
+note: Give aws-deploy.yml and site-control.yml built-in defaults for the AWS repo variables so they work without any being set.
+issues: [23]
