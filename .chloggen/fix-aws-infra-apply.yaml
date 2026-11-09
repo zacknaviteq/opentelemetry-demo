@@ -1,0 +1,6 @@
+change_type: bug_fix
+component: aws
+note: >-
+  Fix the AWS infra apply: reference the GitHub OIDC provider by ARN, let X-Ray create the reserved aws/spans
+  log group, and drop the empty Cloud Map health_check_custom_config that forced replacements.
+issues: [22]

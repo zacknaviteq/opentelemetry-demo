@@ -1,3 +1,6 @@
+# Copyright The OpenTelemetry Authors
+# SPDX-License-Identifier: Apache-2.0
+
 resource "aws_ecs_cluster" "this" {
   name = var.name
 
@@ -41,7 +44,6 @@ resource "aws_service_discovery_service" "this" {
     }
   }
 
-  health_check_custom_config {}
 }
 
 # local.services mixes object shapes, so flatten it into a uniformly typed map

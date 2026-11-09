@@ -1,0 +1,6 @@
+change_type: bug_fix
+component: frontend
+note: >-
+  Roll back the src-frontend dependency bump from #9 (typescript 7 conflicts with the @typescript-eslint
+  peer range and eslint 10), which broke npm ci and every frontend image build.
+issues: [9]

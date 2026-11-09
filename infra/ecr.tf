@@ -1,3 +1,6 @@
+# Copyright The OpenTelemetry Authors
+# SPDX-License-Identifier: Apache-2.0
+
 locals {
   # Every image CI builds (one per container, flagd task has three).
   images = sort(keys(local.image_to_service))

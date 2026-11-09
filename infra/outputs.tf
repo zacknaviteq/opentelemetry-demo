@@ -1,3 +1,6 @@
+# Copyright The OpenTelemetry Authors
+# SPDX-License-Identifier: Apache-2.0
+
 output "shop_url" {
   description = "Public URL of the shop (ALB DNS name, HTTP)."
   value       = "${local.public_url}/"

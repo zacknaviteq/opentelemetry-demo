@@ -1,3 +1,6 @@
+# Copyright The OpenTelemetry Authors
+# SPDX-License-Identifier: Apache-2.0
+
 locals {
   service_arn_prefix = "arn:${data.aws_partition.current.partition}:ecs:${var.region}:${var.account_id}:service/${var.name}"
   log_group_arn      = "arn:${data.aws_partition.current.partition}:logs:${var.region}:${var.account_id}:log-group:/${var.name}/*"
@@ -133,10 +136,11 @@ resource "aws_iam_role_policy" "agent" {
 
 # ---------------------------------------------------------------------------
 # GitHub Actions OIDC deploy role (main branch only)
-# The OIDC provider is owned by zacknaviteq/calc infra.
+# The OIDC provider is owned by zacknaviteq/calc infra. Referenced by ARN (no
+# lookup), so plan/apply don't need iam:ListOpenIDConnectProviders.
 # ---------------------------------------------------------------------------
-data "aws_iam_openid_connect_provider" "github" {
-  url = "https://token.actions.githubusercontent.com"
+locals {
+  github_oidc_provider_arn = "arn:${data.aws_partition.current.partition}:iam::${var.account_id}:oidc-provider/token.actions.githubusercontent.com"
 }
 
 data "aws_iam_policy_document" "github_assume" {
@@ -144,7 +148,7 @@ data "aws_iam_policy_document" "github_assume" {
     actions = ["sts:AssumeRoleWithWebIdentity"]
     principals {
       type        = "Federated"
-      identifiers = [data.aws_iam_openid_connect_provider.github.arn]
+      identifiers = [local.github_oidc_provider_arn]
     }
     condition {
       test     = "StringEquals"
