@@ -64,6 +64,7 @@ locals {
           essential    = try(c.essential, true)
           command      = try(c.command, null)
           user         = try(c.user, null)
+          ulimits      = try(c.ulimits, null)
           dependsOn    = try(c.depends_on, null)
           mountPoints  = try(c.mounts, [])
           volumesFrom  = []

@@ -352,7 +352,11 @@ locals {
           }
         },
         {
-          name       = "flagd-ui", image = "flagd-ui", ports = [4000]
+          # Non-essential: a UI crash must not stop flagd (KAN-16).
+          name = "flagd-ui", image = "flagd-ui", ports = [4000], essential = false
+          # The image CMD runs `ulimit -n 65536`; Fargate's default nofile is 65535,
+          # so raise the limit here or the shell fails and the container exits.
+          ulimits    = [{ name = "nofile", softLimit = 65536, hardLimit = 65536 }]
           mounts     = [{ sourceVolume = "flags", containerPath = "/app/data", readOnly = false }]
           depends_on = [{ containerName = "flagd-init", condition = "SUCCESS" }]
           env = merge(local.metrics_env, {
