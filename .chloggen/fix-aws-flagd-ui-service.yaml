@@ -1,0 +1,4 @@
+change_type: bug_fix
+component: aws
+note: Map the flagd-ui image to the flagd ECS service (flagd-ui runs in the flagd task); aws-deploy failed with ServiceNotFoundException.
+issues: [24]

@@ -93,7 +93,7 @@
   {
     "image": "flagd-ui",
     "dockerfile": "src/flagd-ui/Dockerfile",
-    "service": "flagd-ui",
+    "service": "flagd",
     "paths": [
       "src/flagd-ui/"
     ]
