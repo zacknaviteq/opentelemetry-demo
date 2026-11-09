@@ -1,3 +1,6 @@
+# Copyright The OpenTelemetry Authors
+# SPDX-License-Identifier: Apache-2.0
+
 # Working-hours schedule: start at 08:00 and stop at 18:00 local time
 # (Asia/Jerusalem, DST-aware) on var.schedule_days. The ALB and NAT gateway
 # are not touched. site-control.yml remains a manual override.

@@ -1,3 +1,6 @@
+# Copyright The OpenTelemetry Authors
+# SPDX-License-Identifier: Apache-2.0
+
 # Service catalogue: one ECS service per compose service, translated from
 # compose.yaml + compose.full.yaml + compose.agent.yaml. Compose hostnames are
 # replaced by Cloud Map FQDNs (<svc>.otel-demo.local) because Fargate tasks do

@@ -1,3 +1,6 @@
+# Copyright The OpenTelemetry Authors
+# SPDX-License-Identifier: Apache-2.0
+
 locals {
   service_arn_prefix = "arn:${data.aws_partition.current.partition}:ecs:${var.region}:${var.account_id}:service/${var.name}"
   log_group_arn      = "arn:${data.aws_partition.current.partition}:logs:${var.region}:${var.account_id}:log-group:/${var.name}/*"

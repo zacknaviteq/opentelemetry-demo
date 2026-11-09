@@ -1,3 +1,6 @@
+# Copyright The OpenTelemetry Authors
+# SPDX-License-Identifier: Apache-2.0
+
 # Private subnets + a single NAT gateway in the default VPC. The NAT gateway
 # and ALB stay up 24/7 (the ALB DNS name is the public URL and must not change).
 

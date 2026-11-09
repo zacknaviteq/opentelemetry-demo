@@ -1,3 +1,6 @@
+# Copyright The OpenTelemetry Authors
+# SPDX-License-Identifier: Apache-2.0
+
 # Account-wide budget: this is a linked account and cost-allocation tags can't be
 # activated from it, so a Project=otel-demo filter would match nothing yet.
 # Every resource is still tagged Project=otel-demo (provider default_tags).

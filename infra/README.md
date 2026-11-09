@@ -16,7 +16,7 @@ terraform apply
 ## What it creates
 
 | Area | Resources |
-|------|-----------|
+| --- | --- |
 | Network | 3 private subnets in the default VPC, 1 NAT gateway, task and ALB security groups, Cloud Map namespace `otel-demo.local` |
 | Public access | Internet-facing ALB on HTTP :80 -> `frontend-proxy` (Envoy). Output `shop_url`. Never stopped by the schedule, so the URL is stable |
 | Compute | ECS cluster `otel-demo`, one ARM64 service per demo component (`services.tf`). Stateless services on `FARGATE_SPOT`; `kafka`, `astronomy-db`, `valkey-cart`, `otel-collector` on `FARGATE`; `frontend-proxy` has an on-demand base of 1 |
@@ -33,7 +33,7 @@ setting: X-Ray segments from any workload in the region go to the `aws/spans` lo
 ## GitHub repo variables
 
 | Variable | Value |
-|----------|-------|
+| --- | --- |
 | `AWS_ROLE_ARN` | `terraform output -raw github_deploy_role_arn` |
 | `AWS_REGION` | `us-east-1` |
 | `ECR_REPOSITORY` | `terraform output -raw ecr_repository` |

@@ -1,3 +1,6 @@
+# Copyright The OpenTelemetry Authors
+# SPDX-License-Identifier: Apache-2.0
+
 # CloudWatch for logs, metrics and traces:
 #   - container stdout/stderr: awslogs -> /otel-demo/<service> (ecs.tf)
 #   - OTel logs:    collector -> CloudWatch Logs OTLP endpoint -> /otel-demo/otel-logs
@@ -22,11 +25,8 @@ resource "aws_cloudwatch_log_group" "metrics" {
 
 # --- Transaction Search (account/region-wide setting) ---------------------------
 
-# Pre-create aws/spans so it gets a retention instead of "never expire".
-resource "aws_cloudwatch_log_group" "spans" {
-  name              = "aws/spans"
-  retention_in_days = var.log_retention_days
-}
+# X-Ray creates the aws/spans log group itself ("aws/" names are reserved, so
+# Terraform cannot pre-create it). Its retention is set after it appears.
 
 data "aws_iam_policy_document" "xray_to_logs" {
   statement {
@@ -61,7 +61,7 @@ resource "aws_cloudwatch_log_resource_policy" "xray" {
 resource "aws_xray_trace_segment_destination" "this" {
   destination = "CloudWatchLogs"
 
-  depends_on = [aws_cloudwatch_log_resource_policy.xray, aws_cloudwatch_log_group.spans]
+  depends_on = [aws_cloudwatch_log_resource_policy.xray]
 }
 
 # --- Alerts --------------------------------------------------------------------

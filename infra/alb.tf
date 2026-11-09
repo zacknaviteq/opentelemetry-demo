@@ -1,3 +1,6 @@
+# Copyright The OpenTelemetry Authors
+# SPDX-License-Identifier: Apache-2.0
+
 # Internet-facing ALB on :80 -> frontend-proxy (Envoy). Never stopped by the
 # schedule so its DNS name (the public URL) stays stable.
 
