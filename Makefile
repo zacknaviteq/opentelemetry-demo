@@ -97,6 +97,7 @@ checklicense:	$(ADDLICENSE)
 		-ignore .expo/** \
 		-ignore Pods/** \
 		-ignore ".chloggen/**" \
+		-ignore "**/.terraform.lock.hcl" \
 		-ignore **/extras/** \
 		-ignore **/vendor/** \
 		-ignore **/.venv/** \
@@ -116,6 +117,7 @@ addlicense:	$(ADDLICENSE)
 		-ignore .expo/** \
 		-ignore Pods/** \
 		-ignore ".chloggen/**" \
+		-ignore "**/.terraform.lock.hcl" \
 		-ignore **/extras/** \
 		-ignore **/vendor/** \
 		-ignore **/.venv/** \
