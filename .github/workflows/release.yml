@@ -2,9 +2,9 @@
 # SPDX-License-Identifier: Apache-2.0
 name: "Build and Publish"
 
+# Disabled for the AWS fork: no ghcr/Docker Hub publishing (see aws-deploy.yml).
 on:
-  release:
-    types: [published]
+  workflow_dispatch:
 
 permissions:
   contents: read

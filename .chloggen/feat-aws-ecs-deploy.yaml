@@ -1,0 +1,4 @@
+change_type: new_component
+component: aws
+note: Add an AWS deployment (ECS Fargate ARM64/Spot, ECR, CloudWatch, Bedrock-backed chatbot, working-hours schedule) with Terraform in infra/ and the aws-deploy/site-control workflows; disable ghcr/Docker Hub publishing.
+issues: []

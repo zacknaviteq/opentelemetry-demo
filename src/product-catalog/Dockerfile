@@ -26,6 +26,8 @@ WORKDIR /usr/src/app/
 
 COPY --from=builder /usr/src/app/product-catalog/ ./
 COPY --from=grpc-health-probe /ko-app/grpc-health-probe /bin/grpc_health_probe
+# Default SDK config for OTEL_CONFIG_FILE=/otel-config.yml (compose bind-mounts over it).
+COPY ./otel-config.yml /otel-config.yml
 
 ARG PRODUCT_CATALOG_PORT=3550
 EXPOSE ${PRODUCT_CATALOG_PORT}

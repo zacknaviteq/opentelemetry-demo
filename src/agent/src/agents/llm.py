@@ -9,6 +9,7 @@ import time
 
 import httpx
 from langchain_openai import ChatOpenAI
+from src.agents.bedrock_token import provide_token
 from src.agents.feature_flags import get_int_feature_flag
 from src.agents.patch_vcr import VCR
 
@@ -26,10 +27,20 @@ class ChatLLM(ChatOpenAI):
         kwargs.setdefault("openai_api_base", os.getenv("LLM_BASE_URL"))
         kwargs.setdefault("model", model_name)
 
-        api_key = os.getenv("API_KEY")
+        # LLM_AUTH=bedrock-iam: mint a short-term Bedrock API key from the task's
+        # IAM role. ChatLLM is created per request, so every request gets a fresh key.
+        if os.getenv("LLM_AUTH", "").lower() == "bedrock-iam":
+            api_key = provide_token(region=os.getenv("LLM_REGION"))
+        else:
+            api_key = os.getenv("API_KEY")
         if not api_key:
             api_key = "sk-dummy"
         kwargs.setdefault("api_key", api_key)
+
+        # Optional output cap (LLM_MAX_TOKENS) to bound per-request cost.
+        max_tokens = os.getenv("LLM_MAX_TOKENS")
+        if max_tokens:
+            kwargs.setdefault("max_tokens", int(max_tokens))
 
         super().__init__(**kwargs)
 
