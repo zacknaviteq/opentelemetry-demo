@@ -1,0 +1,4 @@
+change_type: enhancement
+component: aws
+note: Run load-generator on the working-hours schedule with the rest of the demo, so `/loadgen/` is always available while the site is up (KAN-17).
+issues: [PR_NUMBER]

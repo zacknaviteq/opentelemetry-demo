@@ -6,7 +6,7 @@
 """Start/stop the otel-demo ECS services (EventBridge Scheduler target).
 
 Event: {"action": "start" | "stop"}
-    start -> desiredCount=1 for every service in SERVICES (load-generator is not listed)
+    start -> desiredCount=1 for every service in SERVICES (includes load-generator)
     stop  -> desiredCount=0 for every service in the cluster
 """
 
