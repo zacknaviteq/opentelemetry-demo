@@ -2,11 +2,11 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
-FROM ghcr.io/open-telemetry/opentelemetry-operator/autoinstrumentation-nodejs:0.82.0-1@sha256:924a4f85393da2d7ce4ef2f001f6dca6944eb4f93bdc2896dbfb5c870c741bfb AS otelagent
+FROM ghcr.io/open-telemetry/opentelemetry-operator/autoinstrumentation-nodejs:0.82.0-5@sha256:fec6d251e1d6de952c4e2f913378a9f3566d3daacca86b44900f3625f39bb297 AS otelagent
 
 # -----------------------------------------------------------------------------
 
-FROM docker.io/library/node:26.12.1-slim@sha256:36793bcbb160a6a16cede1e62b93f84e26b78a972a8a4c0b879c1c12f22761ec AS builder
+FROM docker.io/library/node:26.13.0-slim@sha256:5adad64f9a1fca2d51972caa65983634c8a774eb300d72b20f7f2a0f60368072 AS builder
 
 WORKDIR /usr/src/app/
 
@@ -17,7 +17,7 @@ RUN npm ci --omit=dev
 
 # -----------------------------------------------------------------------------
 
-FROM gcr.io/distroless/nodejs24-debian13:nonroot@sha256:cb606325b7ec4af55462cb0b424a53b452a5b4a894ffe841fcf1048d216fb9f8
+FROM gcr.io/distroless/nodejs24-debian13:nonroot@sha256:088a01637f22908632ba09018be2e0b516f2fa6f7869c191d29491139db43c78
 
 WORKDIR /usr/src/app/
 
