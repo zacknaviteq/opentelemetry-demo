@@ -221,7 +221,7 @@ locals {
     }
 
     load-generator = {
-      cpu = 512, memory = 2048, capacity = "spot", role = "default", always_off = true
+      cpu = 512, memory = 2048, capacity = "spot", role = "default"
       containers = [{
         name = "load-generator", image = "load-generator", ports = [8089]
         env = merge(local.metrics_env, local.flagd_env, {
@@ -521,7 +521,7 @@ locals {
     }
   }
 
-  # Services the schedule / site-control start (load-generator stays at 0).
+  # Services the schedule / site-control start (all except those with always_off = true).
   scheduled_services = sort([for k, v in local.task_specs : k if !v.always_off])
 
   # ECR image name => ECS service that runs it (used by CI to redeploy).

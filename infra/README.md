@@ -40,7 +40,7 @@ Optional. The workflows default to the values below; set a variable only to over
 | `AWS_REGION` | `us-east-1` |
 | `ECR_REPOSITORY` | `terraform output -raw ecr_repository` |
 | `ECS_CLUSTER` | `terraform output -raw ecs_cluster` |
-| `ECS_SERVICES` | `terraform output -raw scheduled_services` (default: every service except load-generator) |
+| `ECS_SERVICES` | `terraform output -raw scheduled_services` (default: every service in the cluster) |
 | `ARM_RUNNER` | optional, defaults to `ubuntu-24.04-arm` |
 
 ## Workflows

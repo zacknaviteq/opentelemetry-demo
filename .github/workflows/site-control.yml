@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Manual start/stop override for the AWS deployment. The EventBridge schedule
 # (infra/schedule.tf) does the same thing on working days; whichever ran last wins.
-#   start -> desiredCount=1 for vars.ECS_SERVICES, default every service except load-generator
+#   start -> desiredCount=1 for vars.ECS_SERVICES, default every service in the cluster
 #   stop  -> desiredCount=0 for every service in the cluster
 # The ALB and NAT gateway are never touched, so the public URL stays the same.
 name: Site control
@@ -51,9 +51,9 @@ jobs:
             if [ -n "$ECS_SERVICES" ]; then
               services=$(tr ',' ' ' <<<"$ECS_SERVICES")
             else
-              # Default: every service in the cluster except load-generator.
+              # Default: every service in the cluster.
               services=$(aws ecs list-services --cluster "$CLUSTER" --query 'serviceArns[]' --output text \
-                | tr '\t' '\n' | awk -F/ '{print $NF}' | grep -vx load-generator)
+                | tr '\t' '\n' | awk -F/ '{print $NF}')
             fi
           else
             count=0
