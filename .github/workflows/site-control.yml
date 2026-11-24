@@ -38,7 +38,7 @@ jobs:
       ECS_SERVICES: ${{ vars.ECS_SERVICES }}
     steps:
       - name: Configure AWS credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN || 'arn:aws:iam::960410382237:role/otel-demo-github-deploy' }}
           aws-region: ${{ vars.AWS_REGION || 'us-east-1' }}
